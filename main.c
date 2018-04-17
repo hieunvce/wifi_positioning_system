@@ -31,13 +31,14 @@ void main(void)
 	UARTSendString("AT+CWLAPOPT=0,4\r\n");
 	while (!EndOfReceiving(buffer)) {}
 
-	UARTSendString("AT+CWLAP=\"mi4x\"\r\n");
+	UARTSendString("AT+CWLAP=\"AI-THINKER_ACA782\"\r\n");
+
 	while (!EndOfReceiving(buffer)) {}
 
-	UARTSendString("AT+CWLAP=\"henry\"\r\n");
+	UARTSendString("AT+CWLAP=\"WATERFOUNTAINS\"\r\n");
 	while (!EndOfReceiving(buffer)) {}
 
-	UARTSendString("AT+CWLAP=\"AI-THINKER_ACA62F\"\r\n");
+	UARTSendString("AT+CWLAP=\"ESP_ACA5B3\"\r\n");
 	while (!EndOfReceiving(buffer)) {}
 
 	ConvertRSSI2Number(data,&rssi1,&rssi2,&rssi3);

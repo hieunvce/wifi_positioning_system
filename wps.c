@@ -1,12 +1,15 @@
 
 #include "wps.h"
 
-float x = 0.0;
-float y = 0.0;
+double x = 0.0;
+double y = 0.0;
 
-static const float d = 4; //(m) P1_P2_x
-static const float i = 2; //(m) P1_P3_x
-static const float j = 7; //(m) P1_P3_y
+static int x1 = 0;
+static int y1 = 0;
+static int x2 = 480;
+static int y2 = 960;
+static int x3 = 240;
+static int y3 = 540;
 
 const char *OK="OK\r\n";//n=4
 const char *ERROR="ERROR\r\n";//n=7
@@ -115,13 +118,13 @@ void ConvertRSSI2Number(char *rssi, int *r1, int *r2, int *r3)
 
 float calculateDistance(int rssi)
 {
-    return (powf(10.0,(-56+rssi)/30.0));
+    return (powf(10.0,(-40+yyrssi)/20.0));
 }
 
-void calculateLocation(float r1, float r2, float r3)
+void calculateLocation(float d1, float d2, float d3)
 {
-    x = (r1*r1-r2*r2+d*d)/(2*d);
-    y = (r1*r1-r3*r3+i*i+j*j)/(2*j) - (i*x)/j;
+    y=((x1-x3)*(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2)-(x1-x2)*(d1*d1-d3*d3-x1*x1+x3*x3-y1*y1+y3*y3))/(-2*(y1-y2)*(x1-x3)+2*(y1-y3)*(x1-x2));
+    x=(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2+2*y*y2-2*y*y2)/(-2*x1+2*x2);
 }
 
 int EndOfReceiving(char *buffer)
