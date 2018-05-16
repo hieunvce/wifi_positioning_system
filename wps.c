@@ -1,12 +1,9 @@
 
 #include "wps.h"
+#include "msp430g2553.h"
 
 double x = 0.0;
 double y = 0.0;
-
-const char *OK="OK\r\n";//n=4
-const char *ERROR="ERROR\r\n";//n=7
-const char *SENDDATASYMBOL=">\r\n";//n=3
 
 enum ATReturnStatus
 {
@@ -14,63 +11,8 @@ enum ATReturnStatus
     Error = -1,
     Senddata = -2,
     UnknowATReturn = -3
-}
+};
 //===========FUNCTIONS=====================================================
-
-void Configure_Clock(void)
-{
-    if (CALBC1_8MHZ == 0xFF)//Neu calibration constant erased
-    { while(1); }
-    DCOCTL=0;
-    BCSCTL1=CALBC1_1MHZ;
-    DCOCTL=CALDCO_1MHZ;
-
-    BCSCTL2 |= SELM_0;
-    // Chon nguon Clock CPU MCLK la DCO => Tan so hoat dong cua CPU la 1Mhz
-    // Mac dinh MCLK duoc set la DCO roi nen co the bo qua
-}
-
-void Configure_IO(void)
-{
-    P1DIR |= BIT0+BIT6;
-    P1OUT &= ~BIT0;
-    P1OUT &= ~BIT6;
-    P2OUT = 0;
-}
-
-void Configure_UART(void)
-{
-    P1SEL = BIT1+BIT2;//P1.1: RXD, P1.2: TXD
-    P1SEL2 = BIT1+BIT2;//P1.1: RXD, P1.2: TXD
-
-    UCA0CTL1 |= UCSWRST;//Bat RST len de bat dau cau hinh
-    UCA0CTL0 = 0X00;
-    /* Cau hinh:
-     * Khong dung Parity BIT
-     * Khung truyen/nhan 8 bit
-     * 1 bit stop
-     * Truyen bit thap truoc (LSB truoc)
-     */
-
-    UCA0CTL1 = UCSSEL_2; // Chon nguon Clock UART(SMCLK) la DCO 8MHz
-
-
-    UCA0BR0 = 52; //8MHZ 9600
-    UCA0BR1 = 00; //8MHZ 9600
-    UCA0MCTL = UCBRF_1 | UCBRS_0 | UCOS16;//
-    /* Theo bang 15-5 trong User guide:
-     * 8Mhz 9600 co cac thong so nhu sau:
-     * UCBRx=52, UCBRSx=0, UCBRFx=1, UCOS16=1
-     * Ta chinh nhu sau:
-     * (1) UCBRx gom 2 thanh ghi UCA0BR0 (byte thap) va UCA0BR1 (byte cao)
-     * => UCBRx=52 => UCA0BR0 = 52 va UCA0BR1 = 00
-     * (2) UCBRSx=0, UCBRFx=1, UCOS16=1 => UCA0MCTL = UCBRF_1 | UCBRS_0 | UCOS16
-     */
-
-    UCA0CTL1 &= ~UCSWRST; // Reset module de bat dau hoat dong
-    IE2 |= UCA0RXIE; // Cho phep ngat nhan UART Rx
-    __bis_SR_register(GIE);// Cho phep ngat toan cuc
-}
 
 void UARTSendByte(unsigned char byte)
 {
@@ -98,7 +40,7 @@ char UARTReadChar()
     return UCA0RXBUF;
 }
 
-int Compare2String(char *string, const char *value, unsigned int n)
+int Compare2String(char *string, char *value, unsigned int n)
 {
     unsigned int m=n-1;
     for (;m>=0;m--)
@@ -129,13 +71,13 @@ void calculateLocation(float d1, float d2, float d3, int x1, int y1, int x2, int
 
 int EndOfReceiving(char *buffer)
 {
-    if (Compare2String(buffer,OK,4)){
+    if (Compare2String(buffer,"OK\r\n",4)){
         P1OUT ^= BIT0;
         return Ok;
     }
-    else if (Compare2String(buffer,ERROR,7))
+    else if (Compare2String(buffer,"ERROR\r\n",7))
         return Error;
-    else if (Compare2String(buffer,SENDDATASYMBOL,3))
+    else if (Compare2String(buffer,">\r\n",3))
         return Senddata;
     else
         return UnknowATReturn;

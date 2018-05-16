@@ -1,4 +1,5 @@
 #include "wps.h"
+#include "configMSP430.h"
 
 volatile int flag=0;
 char buffer[7]={'\0'};
@@ -8,13 +9,9 @@ int temp=0;
 int infoArray[4];
 int infoIndex=0;
 
-int rssi1=0;
-int rssi2=0;
-int rssi3=0;
-
-float d1=0.0;
-float d2=0.0;
-float d3=0.0;
+int rssi[3]=0;
+float distance[3]=0.0;
+int coordinates[6]=0;
 
 volatile unsigned int i=0;
 volatile unsigned int j=0;
@@ -22,7 +19,6 @@ volatile unsigned int k=0;
 volatile unsigned int id=1;
 volatile unsigned int on=0;
 
-extern enum ATReturnStatus;
 
 void main(void)
 {
@@ -31,21 +27,21 @@ void main(void)
 	Configure_IO();
 	Configure_UART();
 
-	UARTSendString("ATE0\r\n");
+	UARTSendString("ATE0");
 	while (!EndOfReceiving(buffer)) {}
 
-	UARTSendString("AT+CWLAPOPT=0,4\r\n");
+	UARTSendString("AT+CWLAPOPT=0,4");
 	while (!EndOfReceiving(buffer)) {}
 
-	UARTSendstring("AT+CWMODE=1\r\n");
+	UARTSendString("AT+CWMODE=1");
 	_delay_cycles(2000000);
-	UARTSendString("AT+CWLAP=\"EmbeddedSystem\"\r\n");
+	UARTSendString("AT+CWLAP=\"EmbeddedSystem\"");
 	while (!EndOfReceiving(buffer)) {}
 
-	UARTSendString("AT+CWLAP=\"ES_02\"\r\n");
+	UARTSendString("AT+CWLAP=\"ES_02\"");
 	while (!EndOfReceiving(buffer)) {}
 
-	UARTSendString("AT+CWLAP=\"ES_03\"\r\n");
+	UARTSendString("AT+CWLAP=\"ES_03\"");
 	while (!EndOfReceiving(buffer)) {}
 
 	ConvertRSSI2Number(data,&rssi1,&rssi2,&rssi3);
@@ -55,20 +51,20 @@ void main(void)
 
 	calculateLocation(d1,d2,d3,x1,y1,x2,y2,x3,y3);
 
-	UARTSendString("AT+CWMODE=1\r\n");     // get rssi only //
+	UARTSendString("AT+CWMODE=1");     // get rssi only //
 	_delay_cycles(2000000);
-	UARTSendString("AT+CWJAP=\"EmbeddedSystem\",\"12345678\"\r\n");
+	UARTSendString("AT+CWJAP=\"EmbeddedSystem\",\"12345678\"");
 	_delay_cycles(10000000);
-	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.1.78\",5000\r\n");
+	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.1.78\",5000");
 	getInfoFlag=1;//Bat flag de chuan bi nhan Info tu Server
 	 _delay_cycles(5000000);
 
 
 
-	 UARTSendString("AT+CIPMODE=1\r\n");
+	 UARTSendString("AT+CIPMODE=1");
 	 _delay_cycles(5000000);
 
-	 UARTSendString("AT+CIPSEND\r\n");
+	 UARTSendString("AT+CIPSEND");
 	 _delay_cycles(1000000);
 	 UARTSendString("3H,");
 	 //----------------------------
@@ -78,8 +74,8 @@ void main(void)
 	 _delay_cycles(100000);
 	 UARTSendString("+++");
 	 _delay_cycles(2000000);
-	 UARTSendString("AT+CIPMODE=0\r\n"); //disable UART-wifi passthrough mode
-	 UARTSendString("AT+CIPCLOSE\r\n");  //close TCP server
+	 UARTSendString("AT+CIPMODE=0"); //disable UART-wifi passthrough mode
+	 UARTSendString("AT+CIPCLOSE");  //close TCP server
 	while(1){}
 }
 

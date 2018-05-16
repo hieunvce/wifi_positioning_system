@@ -1,1 +1,1 @@
-"./main.obj" "./wps.obj" "../lnk_msp430g2553.cmd" -llibc.a 
+"./configMSP430.obj" "./main.obj" "./wps.obj" "../lnk_msp430g2553.cmd" -llibc.a 

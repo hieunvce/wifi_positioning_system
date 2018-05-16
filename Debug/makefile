@@ -10,6 +10,7 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
+"./configMSP430.obj" \
 "./main.obj" \
 "./wps.obj" \
 "../lnk_msp430g2553.cmd" \
@@ -155,8 +156,8 @@ WifiPositioningSystem.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "main.obj" "wps.obj" 
-	-$(RM) "main.d" "wps.d" 
+	-$(RM) "configMSP430.obj" "main.obj" "wps.obj" 
+	-$(RM) "configMSP430.d" "main.d" "wps.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
