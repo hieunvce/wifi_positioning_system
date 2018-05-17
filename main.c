@@ -5,7 +5,10 @@ int RSSI[3]={0,0,0};
 int *p_rssi;
 float DISTANCE[3]={0.0,0.0,0.0};
 float *p_distance;
-int coordinatesOfAPs[6]={0,0,0,0,0,0};
+int COORDINATESOFAPS[6]={0,0,0,0,0,0};
+int *p_coordinates;
+float LOCATION[2]={0.0,0.0};
+float *p_location;
 
 //For RSSI getting
 volatile int getRSSIFlag=0;
@@ -16,6 +19,10 @@ volatile unsigned int rssiStringIndex=0;
 char buffer[7]={'\0'};
 volatile unsigned int bufferIndex=0;
 
+//For getting data from server
+volatile int getDataFromServerFlag=0;
+char data[50]={'\0'};
+volatile unsigned int dataIndex=0;
 
 void main(void)
 {
@@ -28,7 +35,7 @@ void main(void)
 	WaitingFor(OK);
 	UARTSendString("AT+CWLAPOPT=0,4");
 	WaitingFor(OK);
-	UARTSendString("AT+CWMODE=3");
+	UARTSendString("AT+CWMODE=1");
 	WaitingFor(OK);
 	UARTSendString("AT+CWLAP=\"EmbeddedSystem\"");
 	getRSSIFlag=1;
@@ -45,34 +52,33 @@ void main(void)
 	p_distance=DISTANCE;
 	p_distance=calculateDistance(RSSI);
 
-	calculateLocation(d1,d2,d3,x1,y1,x2,y2,x3,y3);
-
-	UARTSendString("AT+CWMODE=1");     // get rssi only //
-	_delay_cycles(2000000);
+	//Get data from server
+	UARTSendString("AT+CWMODE=1");
+	WaitingFor(OK);
 	UARTSendString("AT+CWJAP=\"EmbeddedSystem\",\"12345678\"");
-	_delay_cycles(10000000);
+	WaitingFor(OK);
 	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.1.78\",5000");
-	getInfoFlag=1;//Bat flag de chuan bi nhan Info tu Server
-	 _delay_cycles(5000000);
+	WaitingFor(OK);
+	getDataFromServerFlag=1;
+	while (getDataFromServerFlag){}
+	p_coordinates=COORDINATESOFAPS;
+	p_coordinates=GetCoordinatesOfAPs(data);
 
+	//Calculate location from data
+	p_location=LOCATION;
+	p_location=calculateLocation(DISTANCE,COORDINATESOFAPS);
 
-
+	//Send location to server
 	 UARTSendString("AT+CIPMODE=1");
-	 _delay_cycles(5000000);
-
+	 WaitingFor(OK);
 	 UARTSendString("AT+CIPSEND");
-	 _delay_cycles(1000000);
-	 UARTSendString("3H,");
-	 //----------------------------
-	 //Gui thong so
-
-	 //----------------------------
-	 _delay_cycles(100000);
-	 UARTSendString("+++");
-	 _delay_cycles(2000000);
+	 WaitingFor(SENDDATA);
+	 SendLocationToServer(LOCATION);
 	 UARTSendString("AT+CIPMODE=0"); //disable UART-wifi passthrough mode
+	 WaitingFor(OK);
 	 UARTSendString("AT+CIPCLOSE");  //close TCP server
-	while(1){}
+	 WaitingFor(OK);
+	 while(1){}
 }
 
 //INTERRUPT
@@ -101,20 +107,12 @@ __interrupt void USCI0RX_ISR(void)
 
 
     //+IDP,23:0,121,24231,23232,1221,21312,3123,12231,23.
-    if (getInfoFlag==1)
+    //Get data from server
+    if (getDataFromServerFlag==1)
     {
-       if (character!=','){
-           int tempo=character-'0';
-           temp=temp*10+tempo;
-       } else if (character==','){
-           infoArray[infoIndex]=temp;
-           temp=0;
-           infoIndex++;
-           if (infoIndex>3)
-           {
-               infoIndex=0;
-               getInfoFlag=0;
-           }
-       }
+        if (character == '.'){
+            getDataFromServerFlag=0;
+        }
+        data[dataIndex++]=character;
     }
 }

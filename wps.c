@@ -54,7 +54,7 @@ int * ConvertRSSI2Number(char *rssiString)
 
 float * calculateDistance(int rssi[])
 {
-    float distance[3]={0.0,0.0,0.0};
+    static float distance[3]={0.0,0.0,0.0};
     distance[0] = (powf(10.0,(-40+rssi[0])/20.0));
     distance[1] = (powf(10.0,(-40+rssi[1])/20.0));
     distance[2] = (powf(10.0,(-40+rssi[2])/20.0));
@@ -149,7 +149,19 @@ void WaitingFor(ATReturnStatus stt)
 {
     while (EndOfReceiving(buffer)!=stt) {}
 }
-//void GetInfo(char *info, int &x1, int &y1, int &x2, int &y2, int &x3, int &y3)
-//{
 
-//}
+void SendLocationToServer(float location[])
+{
+    UARTSendString("Team 3H,(");
+    UARTSendFloat(location[0],2);//Hoi Phu vu coma nay
+    UARTSendString(",");
+    UARTSendFloat(location[1],2);
+    UARTSendString(")");
+    UARTSendString("+++");
+    WaitingFor(ERROR);
+}
+
+int * GetCoordinatesOfAPs(char *dataString){
+    static int coordinates[6]={0};
+    return coordinates;
+}
