@@ -1,23 +1,20 @@
 #include "wps.h"
 #include "configMSP430.h"
 
-volatile int flag=0;
+int RSSI[3]={0,0,0};
+int *p_rssi;
+float DISTANCE[3]={0.0,0.0,0.0};
+float *p_distance;
+int coordinatesOfAPs[6]={0,0,0,0,0,0};
+
+//For RSSI getting
+volatile int getRSSIFlag=0;
+char RSSIString[9]={'\0'};
+volatile unsigned int rssiStringIndex=0;
+
+//For buffer getting
 char buffer[7]={'\0'};
-char data[9]={'\0'};
-int getInfoFlag=0;
-int temp=0;
-int infoArray[4];
-int infoIndex=0;
-
-int rssi[3]=0;
-float distance[3]=0.0;
-int coordinates[6]=0;
-
-volatile unsigned int i=0;
-volatile unsigned int j=0;
-volatile unsigned int k=0;
-volatile unsigned int id=1;
-volatile unsigned int on=0;
+volatile unsigned int bufferIndex=0;
 
 
 void main(void)
@@ -28,26 +25,25 @@ void main(void)
 	Configure_UART();
 
 	UARTSendString("ATE0");
-	while (!EndOfReceiving(buffer)) {}
-
+	WaitingFor(OK);
 	UARTSendString("AT+CWLAPOPT=0,4");
-	while (!EndOfReceiving(buffer)) {}
-
-	UARTSendString("AT+CWMODE=1");
-	_delay_cycles(2000000);
+	WaitingFor(OK);
+	UARTSendString("AT+CWMODE=3");
+	WaitingFor(OK);
 	UARTSendString("AT+CWLAP=\"EmbeddedSystem\"");
-	while (!EndOfReceiving(buffer)) {}
-
+	getRSSIFlag=1;
+	WaitingFor(OK);
 	UARTSendString("AT+CWLAP=\"ES_02\"");
-	while (!EndOfReceiving(buffer)) {}
-
+	getRSSIFlag=1;
+	WaitingFor(OK);
 	UARTSendString("AT+CWLAP=\"ES_03\"");
-	while (!EndOfReceiving(buffer)) {}
+	getRSSIFlag=1;
+	WaitingFor(OK);
 
-	ConvertRSSI2Number(data,&rssi1,&rssi2,&rssi3);
-	d1=calculateDistance(rssi1);
-	d2=calculateDistance(rssi2);
-	d3=calculateDistance(rssi3);
+	p_rssi=RSSI;
+	p_rssi = ConvertRSSI2Number(RSSIString);
+	p_distance=DISTANCE;
+	p_distance=calculateDistance(RSSI);
 
 	calculateLocation(d1,d2,d3,x1,y1,x2,y2,x3,y3);
 
@@ -84,20 +80,26 @@ void main(void)
 __interrupt void USCI0RX_ISR(void)
 {
     char character = UARTReadChar();
-    if (character == '-')
-        on=1;
-    else if (character == ')')
-        on=0;
-    if (on){
-        data[j++]=character;
+    //Get RSSI String ----------------------------------------------------
+    if (getRSSIFlag==1){
+        P1OUT |= BIT6;
+        if (character == '-')
+            getRSSIFlag=2;
+        if (getRSSIFlag==2)
+        {
+            if (character == ')'){
+                getRSSIFlag=0;
+                P1OUT |= ~BIT6;
+            }
+            RSSIString[rssiStringIndex++]=character;
+        }
     }
-    buffer[k++]=character;
-
+    buffer[bufferIndex++]=character;
     if (character=='\n'){
-        k=0;
-        P1OUT ^= BIT6;
-        flag=1;
+        bufferIndex=0;
     }
+
+
     //+IDP,23:0,121,24231,23232,1221,21312,3123,12231,23.
     if (getInfoFlag==1)
     {

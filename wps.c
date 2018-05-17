@@ -2,16 +2,8 @@
 #include "wps.h"
 #include "msp430g2553.h"
 
-double x = 0.0;
-double y = 0.0;
-
-enum ATReturnStatus
-{
-    Ok = 0,
-    Error = -1,
-    Senddata = -2,
-    UnknowATReturn = -3
-};
+ATReturnStatus STT;
+extern char buffer[7];
 //===========FUNCTIONS=====================================================
 
 void UARTSendByte(unsigned char byte)
@@ -21,13 +13,13 @@ void UARTSendByte(unsigned char byte)
     UCA0TXBUF = byte; // Gan du lieu de tu dong truyen di
 }
 
-void UARTSendString(char* TXData)
+void UARTSendString(char* string)
 {
     unsigned int i=0;
-    while(TXData[i])
+    while(string[i])
     {
         while((UCA0STAT & UCBUSY));
-        UCA0TXBUF = TXData[i++];
+        UCA0TXBUF = string[i++];
     }
     UARTSendByte('\r');
     UARTSendByte('\n');
@@ -42,8 +34,8 @@ char UARTReadChar()
 
 int Compare2String(char *string, char *value, unsigned int n)
 {
-    unsigned int m=n-1;
-    for (;m>=0;m--)
+    unsigned int m=0;
+    for (m=0;m<n;m++)
         if(string[m] != value[m])
             return 0;
     string[0]='\0';
@@ -51,52 +43,80 @@ int Compare2String(char *string, char *value, unsigned int n)
 }
 
 
-void ConvertRSSI2Number(char *rssi, int *r1, int *r2, int *r3)
+int * ConvertRSSI2Number(char *rssiString)
 {
-    *r1=(10*(rssi[1]-'0')+(rssi[2]-'0'));
-    *r2=(10*(rssi[4]-'0')+(rssi[5]-'0'));
-    *r3=(10*(rssi[7]-'0')+(rssi[8]-'0'));
+    static int rssi[3];
+    rssi[0]=((rssiString[1]-'0')<<1+(rssiString[1]-'0')<<3+(rssiString[2]-'0'));
+    rssi[1]=((rssiString[4]-'0')<<1+(rssiString[4]-'0')<<3+(rssiString[5]-'0'));
+    rssi[2]=((rssiString[7]-'0')<<1+(rssiString[7]-'0')<<3+(rssiString[8]-'0'));
+    return rssi;
 }
 
-float calculateDistance(int rssi)
+float * calculateDistance(int rssi[])
 {
-    return (powf(10.0,(-40+rssi)/20.0));
+    float distance[3]={0.0,0.0,0.0};
+    distance[0] = (powf(10.0,(-40+rssi[0])/20.0));
+    distance[1] = (powf(10.0,(-40+rssi[1])/20.0));
+    distance[2] = (powf(10.0,(-40+rssi[2])/20.0));
+    return distance;
 }
 
-void calculateLocation(float d1, float d2, float d3, int x1, int y1, int x2, int y2, int x3, int y3)
+float * calculateLocation(float distance[], int coordinatesOfAPs[])
 {
-    y=((x1-x3)*(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2)-(x1-x2)*(d1*d1-d3*d3-x1*x1+x3*x3-y1*y1+y3*y3))/(-2*(y1-y2)*(x1-x3)+2*(y1-y3)*(x1-x2));
-    x=(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2+2*y*y2-2*y*y2)/(-2*x1+2*x2);
+    static float location[2];
+
+    float d1=distance[0];
+    float d2=distance[1];
+    float d3=distance[2];
+
+    int x1=coordinatesOfAPs[0];
+    int y1=coordinatesOfAPs[1];
+    int x2=coordinatesOfAPs[2];
+    int y2=coordinatesOfAPs[3];
+    int x3=coordinatesOfAPs[4];
+    int y3=coordinatesOfAPs[5];
+
+    float y=((x1-x3)*(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2)-(x1-x2)*(d1*d1-d3*d3-x1*x1+x3*x3-y1*y1+y3*y3))/(-2*(y1-y2)*(x1-x3)+2*(y1-y3)*(x1-x2));//y
+    float x=(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2+2*y*y2-2*y*y2)/(-2*x1+2*x2);//x
+
+    location[0]=x;
+    location[1]=y;
+
+    return location;
 }
 
 int EndOfReceiving(char *buffer)
 {
     if (Compare2String(buffer,"OK\r\n",4)){
         P1OUT ^= BIT0;
-        return Ok;
+        return OK;
     }
     else if (Compare2String(buffer,"ERROR\r\n",7))
-        return Error;
+        return ERROR;
     else if (Compare2String(buffer,">\r\n",3))
-        return Senddata;
+        return SENDDATA;
     else
-        return UnknowATReturn;
+        return ATUNKNOWN;
 }
 
-void UARTSendInt(unsigned int n)
+void UARTSendInt(int n)
 {
-    unsigned char buffer[16];
-    unsigned char i,j;
+    unsigned char buffer[7];
+    int i,j;
 
     if (n==0){
         UARTSendByte('0');
         return;
     }
-    for (i=15;i>0 && n>0;i--){
+    if (n<0){
+        UARTSendByte('-');
+        n=~n+1;
+    }
+    for (i=6;i>=0 && n>0;i--){
         buffer[i]=(n%10)+'0';
         n/=10;
     }
-    for (j=i+1;j<=15;j++){
+    for (j=i+1;j<=6;j++){
         UARTSendByte(buffer[j]);
     }
 }
@@ -124,6 +144,11 @@ void UARTSendFloat(double x, unsigned char coma)
         temp = (unsigned long)(x + 0.5); //Lam tron
         UARTSendInt(temp);
     }
+
+void WaitingFor(ATReturnStatus stt)
+{
+    while (EndOfReceiving(buffer)!=stt) {}
+}
 //void GetInfo(char *info, int &x1, int &y1, int &x2, int &y2, int &x3, int &y3)
 //{
 
