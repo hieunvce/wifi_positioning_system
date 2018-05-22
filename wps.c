@@ -4,6 +4,11 @@
 
 ATReturnStatus STT;
 extern char buffer[7];
+extern int RSSI[3];
+extern float DISTANCE[3];
+extern int COORDINATESOFAPS[6];
+extern float LOCATION[2];
+extern int timeUp;
 //===========FUNCTIONS=====================================================
 
 void UARTSendByte(unsigned char byte)
@@ -21,9 +26,28 @@ void UARTSendString(char* string)
         while((UCA0STAT & UCBUSY));
         UCA0TXBUF = string[i++];
     }
+}
+
+void SendATCommand(char *command)
+{
+    while (CheckATReturn() != 1){
+    UARTSendString(command);
     UARTSendByte('\r');
     UARTSendByte('\n');
-    UARTSendByte('\0');
+    Delay(5);
+    }
+}
+
+void Delay(unsigned int milisecond)
+{
+    TACCTL0 = CCIE;
+    while (milisecond>0){
+        while (!timeUp){}
+        milisecond--;
+        timeUp=0;
+        TACCTL0 = CCIE;
+    }
+    P1OUT ^= BIT0;
 }
 
 char UARTReadChar()
@@ -32,7 +56,7 @@ char UARTReadChar()
     return UCA0RXBUF;
 }
 
-int Compare2String(char *string, char *value, unsigned int n)
+int Compare2String(char *string,const char *value, unsigned int n)
 {
     unsigned int m=0;
     for (m=0;m<n;m++)
@@ -43,27 +67,23 @@ int Compare2String(char *string, char *value, unsigned int n)
 }
 
 
-int * ConvertRSSI2Number(char *rssiString)
+void ConvertRSSI2Number(char *rssiString)
 {
-    static int rssi[3];
-    rssi[0]=((rssiString[1]-'0')<<1+(rssiString[1]-'0')<<3+(rssiString[2]-'0'));
-    rssi[1]=((rssiString[4]-'0')<<1+(rssiString[4]-'0')<<3+(rssiString[5]-'0'));
-    rssi[2]=((rssiString[7]-'0')<<1+(rssiString[7]-'0')<<3+(rssiString[8]-'0'));
-    return rssi;
+    RSSI[0]=(10*(rssiString[1]-'0')+(rssiString[2]-'0'));
+    RSSI[1]=(10*(rssiString[4]-'0')+(rssiString[5]-'0'));
+    RSSI[2]=(10*(rssiString[7]-'0')+(rssiString[8]-'0'));
+
 }
 
-float * calculateDistance(int rssi[])
+void calculateDistance(int rssi[])
 {
-    static float distance[3]={0.0,0.0,0.0};
-    distance[0] = (powf(10.0,(-40+rssi[0])/20.0));
-    distance[1] = (powf(10.0,(-40+rssi[1])/20.0));
-    distance[2] = (powf(10.0,(-40+rssi[2])/20.0));
-    return distance;
+    DISTANCE[0] = (powf(10.0,(-40+rssi[0])/20.0));
+    DISTANCE[1] = (powf(10.0,(-40+rssi[1])/20.0));
+    DISTANCE[2] = (powf(10.0,(-40+rssi[2])/20.0));
 }
 
-float * calculateLocation(float distance[], int coordinatesOfAPs[])
+void calculateLocation(float distance[], int coordinatesOfAPs[])
 {
-    static float location[2];
 
     float d1=distance[0];
     float d2=distance[1];
@@ -79,24 +99,26 @@ float * calculateLocation(float distance[], int coordinatesOfAPs[])
     float y=((x1-x3)*(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2)-(x1-x2)*(d1*d1-d3*d3-x1*x1+x3*x3-y1*y1+y3*y3))/(-2*(y1-y2)*(x1-x3)+2*(y1-y3)*(x1-x2));//y
     float x=(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2+2*y*y2-2*y*y2)/(-2*x1+2*x2);//x
 
-    location[0]=x;
-    location[1]=y;
-
-    return location;
+    LOCATION[0]=x;
+    LOCATION[1]=y;
 }
 
-int EndOfReceiving(char *buffer)
+int CheckATReturn()
 {
-    if (Compare2String(buffer,"OK\r\n",4)){
-        P1OUT ^= BIT0;
-        return OK;
+    int returnValue=0;
+    if ((Compare2String(buffer,"OK\r\n",4)))
+    {
+        returnValue=1;
     }
-    else if (Compare2String(buffer,"ERROR\r\n",7))
-        return ERROR;
-    else if (Compare2String(buffer,">\r\n",3))
-        return SENDDATA;
-    else
-        return ATUNKNOWN;
+    else if ((Compare2String(buffer,"ERROR\r\n",7)))
+    {
+        returnValue=-1;
+    }
+
+    unsigned int clearBufferIndex=0;
+    for (clearBufferIndex=0;clearBufferIndex<7;clearBufferIndex++)
+        buffer[clearBufferIndex]='\0';
+    return returnValue;
 }
 
 void UARTSendInt(int n)
@@ -145,23 +167,37 @@ void UARTSendFloat(double x, unsigned char coma)
         UARTSendInt(temp);
     }
 
-void WaitingFor(ATReturnStatus stt)
-{
-    while (EndOfReceiving(buffer)!=stt) {}
-}
-
 void SendLocationToServer(float location[])
 {
     UARTSendString("Team 3H,(");
-    UARTSendFloat(location[0],2);//Hoi Phu vu coma nay
+    UARTSendFloat(loc   ation[0],2);//Hoi Phu vu coma nay
     UARTSendString(",");
     UARTSendFloat(location[1],2);
-    UARTSendString(")");
-    UARTSendString("+++");
-    WaitingFor(ERROR);
+    UARTSendString(")\r\n");
 }
 
-int * GetCoordinatesOfAPs(char *dataString){
-    static int coordinates[6]={0};
-    return coordinates;
+//+IDP,23:0,121,231,232,221,112,823,231,268.
+void GetCoordinatesOfAPs(char *dataString) {
+    volatile unsigned int i = 0;
+    volatile unsigned int coordinatesIndex = 0;
+    while (dataString[i] != ':')
+    {
+        i++;
+    }
+    i++;
+    while (dataString[i] != '.' && coordinatesIndex<6)
+    {
+        if (dataString[i] != ',')
+        {
+            int temp = COORDINATESOFAPS[coordinatesIndex];
+            temp = temp * 10 + (dataString[i] - '0');
+            COORDINATESOFAPS[coordinatesIndex] = temp;
+            i++;
+        }
+        else
+        {
+            i++;
+            coordinatesIndex++;
+        }
+    }
 }

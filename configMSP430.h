@@ -13,6 +13,7 @@
 void Configure_Clock(void);
 void Configure_IO(void);
 void Configure_UART(void);
+void Configure_Timer(void);
 
 
 #endif /* CONFIGMSP430_H_ */

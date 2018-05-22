@@ -12,10 +12,12 @@ void Configure_Clock(void)
     if (CALBC1_8MHZ == 0xFF)//Neu calibration constant erased
     { while(1); }
     DCOCTL=0;
-    BCSCTL1=CALBC1_1MHZ;
-    DCOCTL=CALDCO_1MHZ;
+    BCSCTL1=CALBC1_8MHZ;
+    DCOCTL=CALDCO_8MHZ;
 
-    BCSCTL2 |= SELM_0;
+    //BCSCTL2 |= SELM_0;
+    BCSCTL2 |= SELM_3 + DIVM0;
+    BCSCTL3 |= LFXT1S_2;
     // Chon nguon Clock CPU MCLK la DCO => Tan so hoat dong cua CPU la 1Mhz
     // Mac dinh MCLK duoc set la DCO roi nen co the bo qua
 }
@@ -60,5 +62,14 @@ void Configure_UART(void)
     UCA0CTL1 &= ~UCSWRST; // Reset module de bat dau hoat dong
     IE2 |= UCA0RXIE; // Cho phep ngat nhan UART Rx
     __bis_SR_register(GIE);// Cho phep ngat toan cuc
+}
+
+void Configure_Timer(void)
+{
+    TACCTL0 = CCIE;
+    TACTL=TASSEL_1 + MC_1 + ID_0; //SMCLK, Up, /1
+    TACCR0 = 8000;
+    __enable_interrupt();
+    __bis_SR_register(GIE);
 }
 

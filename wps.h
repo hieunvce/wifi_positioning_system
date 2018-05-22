@@ -18,18 +18,19 @@ extern ATReturnStatus STT;
 
 void UARTSendByte(unsigned char byte);
 void UARTSendString(char* TXData);
+void SendATCommand(char *command);
+void Delay(unsigned int milisecond);
 
 char UARTReadChar();
-int Compare2String(char *string, char *value, unsigned int n);
+int Compare2String(char *string, const char *value, unsigned int n);
 
-int * ConvertRSSI2Number(char *rssiString);
-float * calculateDistance(int rssi[]);
-float * calculateLocation(float distance[], int coordinatesOfAPs[]);
+void ConvertRSSI2Number(char *rssiString);
+void calculateDistance(int rssi[]);
+void calculateLocation(float distance[], int coordinatesOfAPs[]);
 
-int EndOfReceiving(char *buffer);
-void WaitingFor(int stt);
+int CheckATReturn();
 
-int * GetCoordinatesOfAPs(char *dataString);
+void GetCoordinatesOfAPs(char *dataString);
 
 void UARTSendInt(int n);
 void UARTSendFloat(double x, unsigned char coma);

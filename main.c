@@ -5,18 +5,22 @@ int RSSI[3]={0,0,0};
 int *p_rssi;
 float DISTANCE[3]={0.0,0.0,0.0};
 float *p_distance;
-int COORDINATESOFAPS[6]={0,0,0,0,0,0};
+int COORDINATESOFAPS[6]={0};
 int *p_coordinates;
 float LOCATION[2]={0.0,0.0};
 float *p_location;
 
+//For Timer
+unsigned int timeUp=0;
+
 //For RSSI getting
 volatile int getRSSIFlag=0;
-char RSSIString[9]={'\0'};
+char RSSIString[9]={'-','0','0','-','0','0','-','0','0'};
 volatile unsigned int rssiStringIndex=0;
+volatile unsigned int count=0;
 
 //For buffer getting
-char buffer[7]={'\0'};
+char buffer[8]={'\0'};
 volatile unsigned int bufferIndex=0;
 
 //For getting data from server
@@ -30,55 +34,54 @@ void main(void)
 	Configure_Clock();
 	Configure_IO();
 	Configure_UART();
+	Configure_Timer();
 
-	UARTSendString("ATE0");
-	WaitingFor(OK);
-	UARTSendString("AT+CWLAPOPT=0,4");
-	WaitingFor(OK);
-	UARTSendString("AT+CWMODE=1");
-	WaitingFor(OK);
-	UARTSendString("AT+CWLAP=\"EmbeddedSystem\"");
-	getRSSIFlag=1;
-	WaitingFor(OK);
-	UARTSendString("AT+CWLAP=\"ES_02\"");
-	getRSSIFlag=1;
-	WaitingFor(OK);
-	UARTSendString("AT+CWLAP=\"ES_03\"");
-	getRSSIFlag=1;
-	WaitingFor(OK);
 
-	p_rssi=RSSI;
-	p_rssi = ConvertRSSI2Number(RSSIString);
-	p_distance=DISTANCE;
-	p_distance=calculateDistance(RSSI);
+
+	SendATCommand("ATE0");
+	SendATCommand("AT+CWLAPOPT=0,4");
+	SendATCommand("AT+CWMODE=1");
+	while(1){
+	UARTSendString("AT+CWLAP=\"Mang Day KTX\"\r\n");
+	getRSSIFlag=1;
+	Delay(8);
+	UARTSendString("AT+CWLAP=\"windows10\"\r\n");
+	getRSSIFlag=1;
+	Delay(8);
+	UARTSendString("AT+CWLAP=\"MangXaHoi\"\r\n");
+	getRSSIFlag=1;
+	Delay(8);
+
+	ConvertRSSI2Number(RSSIString);
+	calculateDistance(RSSI);
+
 
 	//Get data from server
-	UARTSendString("AT+CWMODE=1");
-	WaitingFor(OK);
-	UARTSendString("AT+CWJAP=\"EmbeddedSystem\",\"12345678\"");
-	WaitingFor(OK);
-	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.1.78\",5000");
-	WaitingFor(OK);
+	SendATCommand("AT+CWJAP=\"windows10\",\"235723579\"");
+	SendATCommand("AT+CIPSTART=\"TCP\",\"192.168.137.1\",5000");
 	getDataFromServerFlag=1;
 	while (getDataFromServerFlag){}
-	p_coordinates=COORDINATESOFAPS;
-	p_coordinates=GetCoordinatesOfAPs(data);
+	UARTSendString(data);
+	GetCoordinatesOfAPs(data);
+
+
 
 	//Calculate location from data
-	p_location=LOCATION;
-	p_location=calculateLocation(DISTANCE,COORDINATESOFAPS);
+	calculateLocation(DISTANCE,COORDINATESOFAPS);
 
 	//Send location to server
-	 UARTSendString("AT+CIPMODE=1");
-	 WaitingFor(OK);
-	 UARTSendString("AT+CIPSEND");
-	 WaitingFor(SENDDATA);
+	 SendATCommand("AT+CIPMODE=1");
+	 UARTSendString("AT+CIPSEND\r\n");
+	 Delay(5);
 	 SendLocationToServer(LOCATION);
-	 UARTSendString("AT+CIPMODE=0"); //disable UART-wifi passthrough mode
-	 WaitingFor(OK);
-	 UARTSendString("AT+CIPCLOSE");  //close TCP server
-	 WaitingFor(OK);
-	 while(1){}
+	 Delay(10);
+	 UARTSendString("+++\r\n");
+	 Delay(6);
+	 SendATCommand("AT+CIPMODE=0"); //disable UART-wifi passthrough mode
+	 SendATCommand("AT+CIPCLOSE");  //close TCP server
+	 Delay(5);
+	}
+
 }
 
 //INTERRUPT
@@ -87,20 +90,34 @@ __interrupt void USCI0RX_ISR(void)
 {
     char character = UARTReadChar();
     //Get RSSI String ----------------------------------------------------
-    if (getRSSIFlag==1){
+    if (getRSSIFlag==1 || getRSSIFlag==2){
+        if (rssiStringIndex>8){
+            rssiStringIndex=0;
+            unsigned int z=0;
+            for (z=0;z<9;z++){
+                RSSIString[z]='0';
+            }
+            RSSIString[0]='-';
+            RSSIString[3]='-';
+            RSSIString[6]='-';
+        }
         P1OUT |= BIT6;
         if (character == '-')
             getRSSIFlag=2;
         if (getRSSIFlag==2)
         {
-            if (character == ')'){
+            count++;
+            RSSIString[rssiStringIndex]=character;
+            rssiStringIndex++;
+            if (count==3)
+            {
+                count=0;
                 getRSSIFlag=0;
-                P1OUT |= ~BIT6;
             }
-            RSSIString[rssiStringIndex++]=character;
         }
     }
-    buffer[bufferIndex++]=character;
+    buffer[bufferIndex]=character;
+    bufferIndex++;
     if (character=='\n'){
         bufferIndex=0;
     }
@@ -115,4 +132,12 @@ __interrupt void USCI0RX_ISR(void)
         }
         data[dataIndex++]=character;
     }
+}
+
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void Timer_A (void)
+{
+    timeUp = 1;
+    TACCTL0 = 0;
+    TACCR0 = 8000;
 }
