@@ -1,10 +1,10 @@
 #include "wps.h"
 #include "configMSP430.h"
 
-int RSSI[3]={0,0,0};
-int DISTANCE[3]={350,200,100};
-int COORDINATESOFAPS[6]={180,500,270,100,500,250};
-float LOCATION[2]={0.0,0.0};
+int volatile RSSI[3]={0,0,0};
+int volatile DISTANCE[3]={350,200,100};
+int volatile COORDINATESOFAPS[6]={180,500,270,100,500,250};
+int volatile LOCATION[2]={0,0};
 volatile int pass=0;
 
 //For Timer
@@ -34,7 +34,7 @@ void main(void)
 	Configure_Timer();
 
 
-
+	/*
 	SendATCommand("ATE0");
 	SendATCommand("AT+CWLAPOPT=0,4");
 	SendATCommand("AT+CWMODE=1");
@@ -63,7 +63,7 @@ void main(void)
 	ConvertRSSI2Number();
 	calculateDistance(RSSI);
 
-	/*//Get data from server
+	//Get data from server
 	//Delay(5);
 	SendATCommand("AT+GSM");
 	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.0.115\",9999");
@@ -71,7 +71,7 @@ void main(void)
 	while (getDataFromServerFlag){}
 	UARTSendString(data);
 	GetCoordinatesOfAPs(data);
-    */
+
 
 
 	//Calculate location from data
@@ -90,6 +90,8 @@ void main(void)
 	 //UARTSendString("AT+RST\r\n");
 	 Delay(5);
 	}
+	*/
+	calculateLocation();
 
 }
 

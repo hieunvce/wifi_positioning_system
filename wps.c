@@ -98,15 +98,15 @@ void calculateLocation()
     int xc=COORDINATESOFAPS[4];
     int yc=COORDINATESOFAPS[5];
 
-    float A=((xa*xa-xb*xb)+(ya*ya-yb*yb)-(da*da-db*db))/2;
-    float B=((xa*xa-xc*xc)+(ya*ya-yc*yc)-(da*da-dc*dc))/2;
-    int X=xa-xb;
-    int Y=ya-yb;
-    int W=xa-xc;
-    int T=ya-yc;
+    float A=(float)(((xa*xa-xb*xb)+(ya*ya-yb*yb)-(da*da-db*db))/2);
+    float B=(float)(((xa*xa-xc*xc)+(ya*ya-yc*yc)-(da*da-dc*dc))/2);
+    float X=(float)(xa-xb);
+    float Y=(float)(ya-yb);
+    float W=(float)(xa-xc);
+    float T=(float)(ya-yc);
 
-    float x=(A*T-Y*B)/(T*X-Y*W);
-    float y=(B-Z*x)/T;
+    float x=(float)((A*T-Y*B)/(T*X-Y*W));
+    float y=(float)((B-W*x)/T);
 
     LOCATION[0]=x;
     LOCATION[1]=y;
