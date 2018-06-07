@@ -2,13 +2,10 @@
 #include "configMSP430.h"
 
 int RSSI[3]={0,0,0};
-int *p_rssi;
-float DISTANCE[3]={0.0,0.0,0.0};
-float *p_distance;
-int COORDINATESOFAPS[6]={0};
-int *p_coordinates;
+int DISTANCE[3]={350,200,100};
+int COORDINATESOFAPS[6]={180,500,270,100,500,250};
 float LOCATION[2]={0.0,0.0};
-float *p_location;
+volatile int pass=0;
 
 //For Timer
 unsigned int timeUp=0;
@@ -41,29 +38,40 @@ void main(void)
 	SendATCommand("ATE0");
 	SendATCommand("AT+CWLAPOPT=0,4");
 	SendATCommand("AT+CWMODE=1");
-	while(1){
-	UARTSendString("AT+CWLAP=\"Mang Day KTX\"\r\n");
-	getRSSIFlag=1;
-	Delay(8);
-	UARTSendString("AT+CWLAP=\"windows10\"\r\n");
-	getRSSIFlag=1;
-	Delay(8);
-	UARTSendString("AT+CWLAP=\"MangXaHoi\"\r\n");
-	getRSSIFlag=1;
-	Delay(8);
+	SendATCommand("AT+CWJAP=\"ES_03\",\"59605287\"");
+//---------------------------------------------------------------------
+	//SendATCommand("AT+GSM");
+	    UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.0.115\",9999\r\n");
+	    getDataFromServerFlag=1;
+	    while (getDataFromServerFlag){}
+	    UARTSendString(data);
+	    GetCoordinatesOfAPs(data);
 
-	ConvertRSSI2Number(RSSIString);
+//---------------------------------------------------------------------
+	while(1){
+	UARTSendString("AT+CWLAP=\"Embedded System\"\r\n");
+	getRSSIFlag=1;
+	Delay(4);
+	UARTSendString("AT+CWLAP=\"ES_02\"\r\n");
+	getRSSIFlag=1;
+	Delay(4);
+	UARTSendString("AT+CWLAP=\"ES_03\"\r\n");
+	getRSSIFlag=1;
+
+	Delay(5);
+	__delay_cycles(400000);
+	ConvertRSSI2Number();
 	calculateDistance(RSSI);
 
-
-	//Get data from server
-	SendATCommand("AT+CWJAP=\"windows10\",\"235723579\"");
-	SendATCommand("AT+CIPSTART=\"TCP\",\"192.168.137.1\",5000");
+	/*//Get data from server
+	//Delay(5);
+	SendATCommand("AT+GSM");
+	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.0.115\",9999");
 	getDataFromServerFlag=1;
 	while (getDataFromServerFlag){}
 	UARTSendString(data);
 	GetCoordinatesOfAPs(data);
-
+    */
 
 
 	//Calculate location from data
@@ -75,10 +83,11 @@ void main(void)
 	 Delay(5);
 	 SendLocationToServer(LOCATION);
 	 Delay(10);
-	 UARTSendString("+++\r\n");
+	 UARTSendString("+++");
 	 Delay(6);
 	 SendATCommand("AT+CIPMODE=0"); //disable UART-wifi passthrough mode
-	 SendATCommand("AT+CIPCLOSE");  //close TCP server
+	 UARTSendString("AT+CIPCLOSE");  //close TCP server
+	 //UARTSendString("AT+RST\r\n");
 	 Delay(5);
 	}
 

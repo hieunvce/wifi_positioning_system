@@ -9,6 +9,8 @@ extern float DISTANCE[3];
 extern int COORDINATESOFAPS[6];
 extern float LOCATION[2];
 extern int timeUp;
+extern int pass;
+extern char RSSIString[9];
 //===========FUNCTIONS=====================================================
 
 void UARTSendByte(unsigned char byte)
@@ -30,12 +32,12 @@ void UARTSendString(char* string)
 
 void SendATCommand(char *command)
 {
-    while (CheckATReturn() != 1){
+    do {
     UARTSendString(command);
     UARTSendByte('\r');
     UARTSendByte('\n');
     Delay(5);
-    }
+    }while (CheckATReturn() != 1);
 }
 
 void Delay(unsigned int milisecond)
@@ -67,37 +69,44 @@ int Compare2String(char *string,const char *value, unsigned int n)
 }
 
 
-void ConvertRSSI2Number(char *rssiString)
+void ConvertRSSI2Number()
 {
-    RSSI[0]=(10*(rssiString[1]-'0')+(rssiString[2]-'0'));
-    RSSI[1]=(10*(rssiString[4]-'0')+(rssiString[5]-'0'));
-    RSSI[2]=(10*(rssiString[7]-'0')+(rssiString[8]-'0'));
+    RSSI[0]=(10*(RSSIString[1]-'0')+(RSSIString[2]-'0'));
+    RSSI[1]=(10*(RSSIString[4]-'0')+(RSSIString[5]-'0'));
+    RSSI[2]=(10*(RSSIString[7]-'0')+(RSSIString[8]-'0'));
 
 }
 
-void calculateDistance(int rssi[])
+void calculateDistance()
 {
-    DISTANCE[0] = (powf(10.0,(-40+rssi[0])/20.0));
-    DISTANCE[1] = (powf(10.0,(-40+rssi[1])/20.0));
-    DISTANCE[2] = (powf(10.0,(-40+rssi[2])/20.0));
+    DISTANCE[0] = (powf(10.0,(-40+RSSI[0])/20.0))*100;
+    DISTANCE[1] = (powf(10.0,(-40+RSSI[1])/20.0))*100;
+    DISTANCE[2] = (powf(10.0,(-40+RSSI[2])/20.0))*100;
 }
 
-void calculateLocation(float distance[], int coordinatesOfAPs[])
+void calculateLocation()
 {
 
-    float d1=distance[0];
-    float d2=distance[1];
-    float d3=distance[2];
+    int da=DISTANCE[0];
+    int db=DISTANCE[1];
+    int dc=DISTANCE[2];
 
-    int x1=coordinatesOfAPs[0];
-    int y1=coordinatesOfAPs[1];
-    int x2=coordinatesOfAPs[2];
-    int y2=coordinatesOfAPs[3];
-    int x3=coordinatesOfAPs[4];
-    int y3=coordinatesOfAPs[5];
+    int xa=COORDINATESOFAPS[0];
+    int ya=COORDINATESOFAPS[1];
+    int xb=COORDINATESOFAPS[2];
+    int yb=COORDINATESOFAPS[3];
+    int xc=COORDINATESOFAPS[4];
+    int yc=COORDINATESOFAPS[5];
 
-    float y=((x1-x3)*(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2)-(x1-x2)*(d1*d1-d3*d3-x1*x1+x3*x3-y1*y1+y3*y3))/(-2*(y1-y2)*(x1-x3)+2*(y1-y3)*(x1-x2));//y
-    float x=(d1*d1-d2*d2-x1*x1+x2*x2-y1*y1+y2*y2+2*y*y2-2*y*y2)/(-2*x1+2*x2);//x
+    float A=((xa*xa-xb*xb)+(ya*ya-yb*yb)-(da*da-db*db))/2;
+    float B=((xa*xa-xc*xc)+(ya*ya-yc*yc)-(da*da-dc*dc))/2;
+    int X=xa-xb;
+    int Y=ya-yb;
+    int W=xa-xc;
+    int T=ya-yc;
+
+    float x=(A*T-Y*B)/(T*X-Y*W);
+    float y=(B-Z*x)/T;
 
     LOCATION[0]=x;
     LOCATION[1]=y;
@@ -170,7 +179,7 @@ void UARTSendFloat(double x, unsigned char coma)
 void SendLocationToServer(float location[])
 {
     UARTSendString("Team 3H,(");
-    UARTSendFloat(loc   ation[0],2);//Hoi Phu vu coma nay
+    UARTSendFloat(location[0],2);//Hoi Phu vu coma nay
     UARTSendString(",");
     UARTSendFloat(location[1],2);
     UARTSendString(")\r\n");

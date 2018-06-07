@@ -24,9 +24,9 @@ void Delay(unsigned int milisecond);
 char UARTReadChar();
 int Compare2String(char *string, const char *value, unsigned int n);
 
-void ConvertRSSI2Number(char *rssiString);
-void calculateDistance(int rssi[]);
-void calculateLocation(float distance[], int coordinatesOfAPs[]);
+void ConvertRSSI2Number();
+void calculateDistance();
+void calculateLocation();
 
 int CheckATReturn();
 
