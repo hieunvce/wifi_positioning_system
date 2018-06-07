@@ -2,12 +2,7 @@
 #include "wps.h"
 #include "msp430g2553.h"
 
-ATReturnStatus STT;
 extern char buffer[7];
-extern int RSSI[3];
-extern float DISTANCE[3];
-extern int COORDINATESOFAPS[6];
-extern float LOCATION[2];
 extern int timeUp;
 extern int pass;
 extern char RSSIString[9];
@@ -69,34 +64,34 @@ int Compare2String(char *string,const char *value, unsigned int n)
 }
 
 
-void ConvertRSSI2Number()
+void ConvertRSSI2Number(int rssi[])
 {
-    RSSI[0]=(10*(RSSIString[1]-'0')+(RSSIString[2]-'0'));
-    RSSI[1]=(10*(RSSIString[4]-'0')+(RSSIString[5]-'0'));
-    RSSI[2]=(10*(RSSIString[7]-'0')+(RSSIString[8]-'0'));
+    rssi[0]=(10*(RSSIString[1]-'0')+(RSSIString[2]-'0'));
+    rssi[1]=(10*(RSSIString[4]-'0')+(RSSIString[5]-'0'));
+    rssi[2]=(10*(RSSIString[7]-'0')+(RSSIString[8]-'0'));
 
 }
 
-void calculateDistance()
+void calculateDistance(int rssi[], int distance[])
 {
-    DISTANCE[0] = (powf(10.0,(-40+RSSI[0])/20.0))*100;
-    DISTANCE[1] = (powf(10.0,(-40+RSSI[1])/20.0))*100;
-    DISTANCE[2] = (powf(10.0,(-40+RSSI[2])/20.0))*100;
+    distance[0] = (int)((powf(10.0,(-40+rssi[0])/20.0))*100);
+    distance[1] = (int)((powf(10.0,(-40+rssi[1])/20.0))*100);
+    distance[2] = (int)((powf(10.0,(-40+rssi[2])/20.0))*100);
 }
 
-void calculateLocation()
+void calculateLocation(int distance[], int coordinatesOfAPs[], float location[])
 {
 
-    int da=DISTANCE[0];
-    int db=DISTANCE[1];
-    int dc=DISTANCE[2];
+    long  da=distance[0];
+    long  db=distance[1];
+    long  dc=distance[2];
 
-    int xa=COORDINATESOFAPS[0];
-    int ya=COORDINATESOFAPS[1];
-    int xb=COORDINATESOFAPS[2];
-    int yb=COORDINATESOFAPS[3];
-    int xc=COORDINATESOFAPS[4];
-    int yc=COORDINATESOFAPS[5];
+    long xa=coordinatesOfAPs[0];
+    long ya=coordinatesOfAPs[1];
+    long xb=coordinatesOfAPs[2];
+    long yb=coordinatesOfAPs[3];
+    long xc=coordinatesOfAPs[4];
+    long yc=coordinatesOfAPs[5];
 
     float A=(float)(((xa*xa-xb*xb)+(ya*ya-yb*yb)-(da*da-db*db))/2);
     float B=(float)(((xa*xa-xc*xc)+(ya*ya-yc*yc)-(da*da-dc*dc))/2);
@@ -108,8 +103,8 @@ void calculateLocation()
     float x=(float)((A*T-Y*B)/(T*X-Y*W));
     float y=(float)((B-W*x)/T);
 
-    LOCATION[0]=x;
-    LOCATION[1]=y;
+    location[0]=x;
+    location[1]=y;
 }
 
 int CheckATReturn()
@@ -186,7 +181,7 @@ void SendLocationToServer(float location[])
 }
 
 //+IDP,23:0,121,231,232,221,112,823,231,268.
-void GetCoordinatesOfAPs(char *dataString) {
+void GetCoordinatesOfAPs(char *dataString, int coordinatesOfAPs[] ) {
     volatile unsigned int i = 0;
     volatile unsigned int coordinatesIndex = 0;
     while (dataString[i] != ':')
@@ -198,9 +193,9 @@ void GetCoordinatesOfAPs(char *dataString) {
     {
         if (dataString[i] != ',')
         {
-            int temp = COORDINATESOFAPS[coordinatesIndex];
+            int temp = coordinatesOfAPs[coordinatesIndex];
             temp = temp * 10 + (dataString[i] - '0');
-            COORDINATESOFAPS[coordinatesIndex] = temp;
+            coordinatesOfAPs[coordinatesIndex] = temp;
             i++;
         }
         else

@@ -1,10 +1,6 @@
 #include "wps.h"
 #include "configMSP430.h"
 
-int volatile RSSI[3]={0,0,0};
-int volatile DISTANCE[3]={350,200,100};
-int volatile COORDINATESOFAPS[6]={180,500,270,100,500,250};
-int volatile LOCATION[2]={0,0};
 volatile int pass=0;
 
 //For Timer
@@ -33,19 +29,22 @@ void main(void)
 	Configure_UART();
 	Configure_Timer();
 
+	int RSSI[3]={0,0,0};
+	int DISTANCE[3]={350,200,100};
+	int COORDINATESOFAPS[6]={180,500,270,100,500,250};
+	float LOCATION[2]={0.0,0.0};
 
-	/*
 	SendATCommand("ATE0");
 	SendATCommand("AT+CWLAPOPT=0,4");
 	SendATCommand("AT+CWMODE=1");
-	SendATCommand("AT+CWJAP=\"ES_03\",\"59605287\"");
+	SendATCommand("AT+CWJAP=\"Embedded System\",\"12345678\"");
 //---------------------------------------------------------------------
 	//SendATCommand("AT+GSM");
-	    UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.0.115\",9999\r\n");
+	    UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.1.102\",9999\r\n");
 	    getDataFromServerFlag=1;
 	    while (getDataFromServerFlag){}
 	    UARTSendString(data);
-	    GetCoordinatesOfAPs(data);
+	    GetCoordinatesOfAPs(data,COORDINATESOFAPS);
 
 //---------------------------------------------------------------------
 	while(1){
@@ -60,22 +59,22 @@ void main(void)
 
 	Delay(5);
 	__delay_cycles(400000);
-	ConvertRSSI2Number();
-	calculateDistance(RSSI);
+	ConvertRSSI2Number(RSSI);
+	calculateDistance(RSSI,DISTANCE);
 
-	//Get data from server
+	/*//Get data from server
 	//Delay(5);
 	SendATCommand("AT+GSM");
-	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.0.115\",9999");
+	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.0.102\",9999");
 	getDataFromServerFlag=1;
 	while (getDataFromServerFlag){}
 	UARTSendString(data);
-	GetCoordinatesOfAPs(data);
+	GetCoordinatesOfAPs(data);*/
 
 
 
 	//Calculate location from data
-	calculateLocation(DISTANCE,COORDINATESOFAPS);
+	calculateLocation(DISTANCE,COORDINATESOFAPS,LOCATION);
 
 	//Send location to server
 	 SendATCommand("AT+CIPMODE=1");
@@ -90,8 +89,7 @@ void main(void)
 	 //UARTSendString("AT+RST\r\n");
 	 Delay(5);
 	}
-	*/
-	calculateLocation();
+
 
 }
 

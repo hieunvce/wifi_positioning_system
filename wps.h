@@ -3,14 +3,6 @@
 
 #include "math.h"
 
-typedef enum
-{
-    OK = 1,
-    ERROR = 0,
-    SENDDATA = 2,
-    ATUNKNOWN = -1
-}  ATReturnStatus;
-
 extern ATReturnStatus STT;
 //======================================
 
@@ -24,17 +16,16 @@ void Delay(unsigned int milisecond);
 char UARTReadChar();
 int Compare2String(char *string, const char *value, unsigned int n);
 
-void ConvertRSSI2Number();
-void calculateDistance();
-void calculateLocation();
+void ConvertRSSI2Number(int rssi[]);
+void calculateDistance(int rssi[], int distance[]);
+void calculateLocation(int distance[], int coordinatesOfAPs[], float location[]);
 
 int CheckATReturn();
 
-void GetCoordinatesOfAPs(char *dataString);
+void GetCoordinatesOfAPs(char *dataString, int coordinatesOfAPs[] );
 
 void UARTSendInt(int n);
 void UARTSendFloat(double x, unsigned char coma);
 void StartTCPServer(char IP[], char port[]);
 void SendLocationToServer(float location[]);
-//void GetInfo(char *info, int &x1, int &y1, int &x2, int &y2, int &x3, int &y3);
 #endif /* WPS_H_ */
