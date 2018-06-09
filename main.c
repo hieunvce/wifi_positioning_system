@@ -18,6 +18,7 @@ volatile unsigned int bufferIndex=0;
 
 //For getting data from server
 volatile int getDataFromServerFlag=0;
+volatile int writeData=0;
 char data[50]={'\0'};
 volatile unsigned int dataIndex=0;
 
@@ -30,48 +31,42 @@ void main(void)
 	Configure_Timer();
 
 	int RSSI[3]={0,0,0};
-	int DISTANCE[3]={350,200,100};
-	int COORDINATESOFAPS[6]={180,500,270,100,500,250};
+	int DISTANCE[3]={ 0,0,0 };//Embedded, ES02, ES03
+	int COORDINATESOFAPS[6]={ 0,0,0,0,0,0 };//Always keep it {0,0,0,0,0,0}
 	float LOCATION[2]={0.0,0.0};
 
+	UARTSendString("AT+RST\r\n");
 	SendATCommand("ATE0");
 	SendATCommand("AT+CWLAPOPT=0,4");
 	SendATCommand("AT+CWMODE=1");
 	SendATCommand("AT+CWJAP=\"Embedded System\",\"12345678\"");
 //---------------------------------------------------------------------
-	//SendATCommand("AT+GSM");
-	    UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.1.102\",9999\r\n");
-	    getDataFromServerFlag=1;
-	    while (getDataFromServerFlag){}
-	    UARTSendString(data);
-	    GetCoordinatesOfAPs(data,COORDINATESOFAPS);
-
-//---------------------------------------------------------------------
-	while(1){
-	UARTSendString("AT+CWLAP=\"Embedded System\"\r\n");
-	getRSSIFlag=1;
-	Delay(4);
-	UARTSendString("AT+CWLAP=\"ES_02\"\r\n");
-	getRSSIFlag=1;
-	Delay(4);
-	UARTSendString("AT+CWLAP=\"ES_03\"\r\n");
-	getRSSIFlag=1;
-
-	Delay(5);
-	__delay_cycles(400000);
-	ConvertRSSI2Number(RSSI);
-	calculateDistance(RSSI,DISTANCE);
-
-	/*//Get data from server
-	//Delay(5);
-	SendATCommand("AT+GSM");
-	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.0.102\",9999");
+	UARTSendString("AT+CIPSTART=\"TCP\",\"192.168.1.101\",9999\r\n");
 	getDataFromServerFlag=1;
 	while (getDataFromServerFlag){}
 	UARTSendString(data);
-	GetCoordinatesOfAPs(data);*/
-
-
+	GetCoordinatesOfAPs(data,COORDINATESOFAPS);
+	//600,650,900,240,0,0
+//---------------------------------------------------------------------
+	while(1){
+	    do{
+	UARTSendString("AT+CWLAP=\"Embedded System\"\r\n");
+	getRSSIFlag=1;
+	Delay(4);
+	    }while (RSSIString[1]=='0');
+	        do{
+	UARTSendString("AT+CWLAP=\"ES_02\"\r\n");
+	getRSSIFlag=1;
+	Delay(4);
+	        }while (RSSIString[4]=='0');
+	        do{
+	UARTSendString("AT+CWLAP=\"ES_03\"\r\n");
+	getRSSIFlag=1;
+	Delay(5);
+	        }while (RSSIString[7]=='0');
+	__delay_cycles(400000);
+	ConvertRSSI2Number(RSSI,RSSIString);
+	calculateDistance(RSSI,DISTANCE);
 
 	//Calculate location from data
 	calculateLocation(DISTANCE,COORDINATESOFAPS,LOCATION);
@@ -81,12 +76,12 @@ void main(void)
 	 UARTSendString("AT+CIPSEND\r\n");
 	 Delay(5);
 	 SendLocationToServer(LOCATION);
+	 SendLogToServer(RSSI,DISTANCE);
 	 Delay(10);
 	 UARTSendString("+++");
 	 Delay(6);
 	 SendATCommand("AT+CIPMODE=0"); //disable UART-wifi passthrough mode
 	 UARTSendString("AT+CIPCLOSE");  //close TCP server
-	 //UARTSendString("AT+RST\r\n");
 	 Delay(5);
 	}
 
@@ -102,10 +97,6 @@ __interrupt void USCI0RX_ISR(void)
     if (getRSSIFlag==1 || getRSSIFlag==2){
         if (rssiStringIndex>8){
             rssiStringIndex=0;
-            unsigned int z=0;
-            for (z=0;z<9;z++){
-                RSSIString[z]='0';
-            }
             RSSIString[0]='-';
             RSSIString[3]='-';
             RSSIString[6]='-';
@@ -132,21 +123,24 @@ __interrupt void USCI0RX_ISR(void)
     }
 
 
-    //+IDP,23:0,121,24231,23232,1221,21312,3123,12231,23.
     //Get data from server
     if (getDataFromServerFlag==1)
     {
         if (character == '.'){
             getDataFromServerFlag=0;
         }
+        if (character == '+')
+            writeData=1;
+        if (writeData==1){
         data[dataIndex++]=character;
+        }
     }
 }
 
-#pragma vector=TIMER0_A0_VECTOR
-__interrupt void Timer_A (void)
-{
-    timeUp = 1;
-    TACCTL0 = 0;
-    TACCR0 = 8000;
-}
+	#pragma vector=TIMER0_A0_VECTOR
+	__interrupt void Timer_A (void)
+	{
+		timeUp = 1;
+		TACCTL0 = 0;
+		TACCR0 = 8000;
+	}

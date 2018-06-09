@@ -64,12 +64,11 @@ int Compare2String(char *string,const char *value, unsigned int n)
 }
 
 
-void ConvertRSSI2Number(int rssi[])
+void ConvertRSSI2Number(int rssi[],char rssiString[])
 {
-    rssi[0]=(10*(RSSIString[1]-'0')+(RSSIString[2]-'0'));
-    rssi[1]=(10*(RSSIString[4]-'0')+(RSSIString[5]-'0'));
-    rssi[2]=(10*(RSSIString[7]-'0')+(RSSIString[8]-'0'));
-
+    rssi[0]=(10*(rssiString[1]-'0')+(rssiString[2]-'0'));
+    rssi[1]=(10*(rssiString[4]-'0')+(rssiString[5]-'0'));
+    rssi[2]=(10*(rssiString[7]-'0')+(rssiString[8]-'0'));
 }
 
 void calculateDistance(int rssi[], int distance[])
@@ -174,14 +173,14 @@ void UARTSendFloat(double x, unsigned char coma)
 void SendLocationToServer(float location[])
 {
     UARTSendString("Team 3H,(");
-    UARTSendFloat(location[0],2);//Hoi Phu vu coma nay
+    UARTSendFloat(location[0],2);
     UARTSendString(",");
     UARTSendFloat(location[1],2);
     UARTSendString(")\r\n");
 }
 
 //+IDP,23:0,121,231,232,221,112,823,231,268.
-void GetCoordinatesOfAPs(char *dataString, int coordinatesOfAPs[] ) {
+void GetCoordinatesOfAPs(char dataString[], int coordinatesOfAPs[] ) {
     volatile unsigned int i = 0;
     volatile unsigned int coordinatesIndex = 0;
     while (dataString[i] != ':')
@@ -204,4 +203,22 @@ void GetCoordinatesOfAPs(char *dataString, int coordinatesOfAPs[] ) {
             coordinatesIndex++;
         }
     }
+}
+
+void SendLogToServer(int rssi[], int distance[]){
+    UARTSendString("Team 3H-Log: RSSI: ");
+    UARTSendInt(rssi[0]);
+    UARTSendString(",");
+    UARTSendInt(rssi[1]);
+    UARTSendString(",");
+    UARTSendInt(rssi[2]);
+    UARTSendString("\n");
+
+    UARTSendString("Team 3H-Log: DISTANCE: ");
+    UARTSendInt(distance[0]);
+    UARTSendString(",");
+    UARTSendInt(distance[1]);
+    UARTSendString(",");
+    UARTSendInt(distance[2]);
+    UARTSendString("\n");
 }
